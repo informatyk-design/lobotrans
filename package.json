@@ -1,0 +1,12 @@
+{
+  "name": "lobotrans",
+  "version": "1.0.0",
+  "description": "System zarządzania trasami pojazdów - Lobotrans",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
