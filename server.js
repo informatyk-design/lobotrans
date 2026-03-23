@@ -4,20 +4,53 @@ const path    = require('path');
 
 const app     = express();
 const DB_FILE = path.join(__dirname, 'data.json');
-const USE_KV = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 
-// ── Data helpers (dual: file locally / Vercel KV in production) ─────────
+// ── GitHub-backed storage (production) ────────────────────────────────
+//   Falls back to local data.json for development.
+
+const GH_TOKEN = process.env.GITHUB_TOKEN;
+const GH_OWNER = process.env.GITHUB_OWNER || 'informatyk-design';
+const GH_REPO  = process.env.GITHUB_REPO  || 'lobotrans';
+const GH_FILE  = 'data/db.json';
+const GH_API   = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
+
+const USE_GITHUB = !!GH_TOKEN;
 
 const EMPTY_DB = () => ({
   vehicles: [], routes: [], drivers: [], vehicle_statuses: [],
   nextVehicleId: 1, nextRouteId: 1, nextDriverId: 1, nextStatusId: 1,
 });
 
+async function ghGet() {
+  const r = await fetch(GH_API, {
+    headers: { Authorization: `token ${GH_TOKEN}`, Accept: 'application/vnd.github.v3+json' },
+  });
+  if (r.status === 404) return { data: EMPTY_DB(), sha: null };
+  if (!r.ok) throw new Error(`GitHub GET ${r.status}`);
+  const json = await r.json();
+  const data = JSON.parse(Buffer.from(json.content, 'base64').toString('utf8'));
+  return { data, sha: json.sha };
+}
+
+async function ghPut(db, sha) {
+  const content = Buffer.from(JSON.stringify(db)).toString('base64');
+  const body    = { message: 'db update', content, ...(sha ? { sha } : {}) };
+  const r = await fetch(GH_API, {
+    method: 'PUT',
+    headers: { Authorization: `token ${GH_TOKEN}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(`GitHub PUT ${r.status}: ${await r.text()}`);
+}
+
+// In-process SHA cache to avoid double-read on write
+let _cachedSha = null;
+
 async function readDB() {
-  if (USE_KV) {
-    const { kv } = require('@vercel/kv');
-    const db = await kv.get('lobotrans_db');
-    return db || EMPTY_DB();
+  if (USE_GITHUB) {
+    const { data, sha } = await ghGet();
+    _cachedSha = sha;
+    return data;
   }
   if (!fs.existsSync(DB_FILE)) return EMPTY_DB();
   try { return JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); }
@@ -25,9 +58,16 @@ async function readDB() {
 }
 
 async function writeDB(db) {
-  if (USE_KV) {
-    const { kv } = require('@vercel/kv');
-    await kv.set('lobotrans_db', db);
+  if (USE_GITHUB) {
+    // If we don't have SHA yet, fetch it first
+    if (!_cachedSha) {
+      const { sha } = await ghGet();
+      _cachedSha = sha;
+    }
+    await ghPut(db, _cachedSha);
+    // Refresh SHA after write
+    const { sha: newSha } = await ghGet();
+    _cachedSha = newSha;
   } else {
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
   }
@@ -126,7 +166,6 @@ app.get('/api/routes', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Returns conflicting route or null
 function findOverlap(db, vehicle_id, date, start_time, end_time, excludeId = null) {
   const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
   const newS  = toMin(start_time);
