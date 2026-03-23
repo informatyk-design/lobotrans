@@ -1,1 +1,1 @@
-{"vehicles":[],"routes":[],"drivers":[],"vehicle_statuses":[],"nextVehicleId":1,"nextRouteId":1,"nextDriverId":1,"nextStatusId":1}
+{"vehicles":[{"id":1,"name":"WL6952K","color":"#e74c3c","sort_order":1},{"id":2,"name":"WZ494KW","color":"#3498db","sort_order":2},{"id":3,"name":"WZ493KW","color":"#808000","sort_order":3},{"id":4,"name":"WZW27207","color":"#e91e8c","sort_order":4},{"id":5,"name":"WZ100AB","color":"#2ecc71","sort_order":5}],"routes":[],"drivers":[],"vehicle_statuses":[],"nextVehicleId":6,"nextRouteId":1,"nextDriverId":1,"nextStatusId":1}
