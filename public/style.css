@@ -296,7 +296,7 @@ body {
   transition: background .1s;
 }
 .route-cell:hover { background: #f5f7ff !important; }
-.route-cell:last-child { border-bottom: none; }
+tr:last-child .route-cell { border-bottom: none; }
 .route-cell.last-col { border-right: none; }
 
 .route-cell.is-today { background: #fffcf5; }

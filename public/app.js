@@ -168,7 +168,7 @@ function renderCalendar() {
         const dateStr    = formatDate(day);
         const isToday    = dateStr === todayStr;
         const isWeekend  = day.getDay() === 0 || day.getDay() === 6;
-        const isLast     = dayIdx === 6;
+        const isLast     = dayIdx === days.length - 1;
         const cellRoutes = state.routes.filter(r => r.vehicle_id === vehicle.id && r.date === dateStr);
 
         html += `<td class="route-cell` +
@@ -182,7 +182,7 @@ function renderCalendar() {
           const left  = Math.max(0, (startMin - dayStart) / DAY_MINUTES * 100);
           const right = Math.min(100, (endMin   - dayStart) / DAY_MINUTES * 100);
           const width = Math.max(right - left, 1.5);
-          const top   = 4 + idx * 30;
+          const top   = 4;
           html += `<div class="route-bar" ` +
             `style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%;top:${top}px;background:${vehicle.color}" ` +
             `data-route-id="${route.id}" data-tip="${escAttr(buildTooltip(route, vehicle))}">` +
